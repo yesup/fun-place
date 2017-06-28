@@ -32,7 +32,8 @@ public class DummyClient implements Closeable {
     final int total;
     final int qps;
 
-    long startTs = System.currentTimeMillis();
+    long startTs;
+    final long constructTime;
 
     final EventLoopGroup workerGroup = new EpollEventLoopGroup();
 
@@ -46,7 +47,11 @@ public class DummyClient implements Closeable {
     ManagedChannel ch = null;
     DummyServerGrpc.DummyServerStub stub;
 
+    final HelloRequest req;
+
     public DummyClient(int total, int qps) {
+        startTs = System.currentTimeMillis();
+
         this.total = total;
         this.qps = qps;
 
@@ -55,10 +60,21 @@ public class DummyClient implements Closeable {
                 .eventLoopGroup(workerGroup)
                 .channelType(EpollSocketChannel.class)
                 .usePlaintext(true)
-                // .flowControlWindow(Constants.flowWindow)
+                .flowControlWindow(Constants.flowWindow)
                 .build();
 
         stub = DummyServerGrpc.newStub(ch);
+
+        HelloRequest.Builder builder = HelloRequest.newBuilder();
+        builder.setName("Jeff " + Math.random());
+        builder.setPayload(createBidRequest().toByteString());
+        req = builder.build();
+
+        // send a blocking req
+        DummyServerGrpc.DummyServerBlockingStub bStub = DummyServerGrpc.newBlockingStub(ch);
+        bStub.hello(req);
+
+        constructTime = System.currentTimeMillis() - startTs;
     }
 
     public void sendAndWaitComplete() throws Exception {
@@ -68,19 +84,12 @@ public class DummyClient implements Closeable {
 
         RateLimiter limiter = RateLimiter.create(qps);
 
-        HelloRequest.Builder builder = HelloRequest.newBuilder();
-        builder.setName("Jeff");
-        builder.setPayload(createBidRequest().toByteString());
-        HelloRequest req = builder.build();
-
         AtomicInteger totalCounter = new AtomicInteger(0);
-
 
         ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<>(total);
 
-        for(int i=0; i<total; i++) {
+        for (int i = 0; i < total; i++) {
             limiter.acquire();
-
 
             stub.hello(req, new StreamObserver<HelloReply>() {
 
@@ -107,23 +116,25 @@ public class DummyClient implements Closeable {
                 }
 
                 void progressDisplay() {
-                    long delay = System.currentTimeMillis() - req_start;
-                    slowest.updateAndGet((prev)-> delay > prev ? delay : prev);
-                    totalTime.addAndGet(delay);
+
                     int replied = totalCounter.incrementAndGet();
-                    if ( replied % 1000 == 0 ) {
+                    if (replied % 1000 == 0) {
                         LOG.info("{} replied", replied);
                     }
+
+                    long delay = System.currentTimeMillis() - req_start;
+                    slowest.updateAndGet((prev) -> delay > prev ? delay : prev);
+                    totalTime.addAndGet(delay);
                 }
             });
 
-            if ( i % 1000 == 0 ) {
+            if (i % 1000 == 0) {
                 LOG.info("{} req sent", i);
             }
         }
 
         int finished = 0;
-        while (finished < total ) {
+        while (finished < total) {
             String name = queue.take();
             finished++;
         }
@@ -131,7 +142,7 @@ public class DummyClient implements Closeable {
 
     }
 
-    OpenRtb.BidRequest createBidRequest () {
+    OpenRtb.BidRequest createBidRequest() {
         OpenRtb.BidRequest.Builder bidBuilder = OpenRtb.BidRequest.newBuilder();
 
         bidBuilder.setId("test-1111111");
@@ -186,14 +197,15 @@ public class DummyClient implements Closeable {
         long speed = totalTime.get() / total;
         long serverDelay = totalServerDelay.get() / total;
 
-        LOG.info("Done {}, error {}, through put {} QPS, speed {}ms, server delay {}ms, slowest {}", new Object[] {
+        LOG.info("Prepare {}ms, Done {}, error {}, through put {} QPS, speed {}ms, server delay {}ms, slowest {}", new Object[]{
+                constructTime,
                 doneCounter.get(),
                 errorCounter.get(),
                 throughput,
                 speed,
                 serverDelay,
                 slowest.get()
-        } );
+        });
     }
 
     @Override

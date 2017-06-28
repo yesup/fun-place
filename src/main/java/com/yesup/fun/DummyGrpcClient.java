@@ -22,6 +22,7 @@ public class DummyGrpcClient {
     }
 
     public static void main(String[] args) throws Exception {
+
         try ( DummyClient client = new DummyClient(Constants.REQ_TOTAL, Constants.REQ_QPS) ) {
             client.sendAndWaitComplete();
             client.report();

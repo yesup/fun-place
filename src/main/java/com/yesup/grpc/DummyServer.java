@@ -34,6 +34,7 @@ public class DummyServer {
         bossGroup = new EpollEventLoopGroup(1);
         workGroup = new EpollEventLoopGroup(16);
 
+        DummyServerImpl serviceHandler = new DummyServerImpl();
 
         impl = NettyServerBuilder
                 .forPort(Constants.PORT)
@@ -41,10 +42,12 @@ public class DummyServer {
                 .workerEventLoopGroup(workGroup)
                 .channelType(EpollServerSocketChannel.class)
                 .flowControlWindow(Constants.flowWindow)
-                .addService(new DummyServerImpl())
+                .addService(serviceHandler)
                 .build();
 
         impl.start();
+
+        serviceHandler.warmup();
 
         LOG.info("Listening on {}", Constants.PORT);
 

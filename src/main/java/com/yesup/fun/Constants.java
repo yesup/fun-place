@@ -9,6 +9,9 @@ public final class Constants {
 
     public final static int PORT = 9999;
 
+    public final static int WARM_UP_REQ_NUM = 30000;
+    public final static int WARM_UP_QPS = 3000;
+
     public final static int REQ_TOTAL = 1000000;
 
     public final static int REQ_QPS = 10000;
