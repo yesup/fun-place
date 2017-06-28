@@ -22,33 +22,33 @@ public class ProcessQueue extends Thread {
 
     private final static Logger LOG = LoggerFactory.getLogger(ProcessQueue.class);
 
-    class Item implements Delayed {
+    static class Item implements Delayed {
 
-        final long expireTs;
+        final long insertTs;
         final HelloRequest req;
         final StreamObserver<HelloReply> responseObserver;
 
         Item(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
-            expireTs = System.currentTimeMillis() + Constants.REPLY_DEPLAY;
+            insertTs = System.currentTimeMillis();
             this.req = req;
             this.responseObserver = responseObserver;
         }
 
         @Override
         public long getDelay(TimeUnit unit) {
-            long diff = expireTs - System.currentTimeMillis();
+            long diff = insertTs + Constants.REPLY_DEPLAY - System.currentTimeMillis();
             return unit.convert(diff, TimeUnit.MILLISECONDS);
         }
 
         @Override
         public int compareTo(Delayed o) {
-            return Long.compare(expireTs, ((Item) o).expireTs );
+            return Long.compare(insertTs, ((Item) o).insertTs );
         }
     }
 
-    final DelayQueue<Item> queue = new DelayQueue<>();
+    final static DelayQueue<Item> queue = new DelayQueue<>();
 
-    public void forDelay(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
+    static public void forDelay(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
         queue.put(new Item(req, responseObserver));
     }
 
@@ -83,6 +83,7 @@ public class ProcessQueue extends Thread {
                 builder.setReqId(id);
                 builder.setName(name);
                 builder.setJson(json);
+                builder.setDelay(System.currentTimeMillis() - item.insertTs);
 
                 item.responseObserver.onNext(builder.build());
                 item.responseObserver.onCompleted();

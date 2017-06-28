@@ -14,4 +14,8 @@ public final class Constants {
     public final static int REQ_QPS = 10000;
 
     public final static long REPLY_DEPLAY = 100;
+
+    public final static int QUEUE_HANDLER_NUM = 8;
+
+    public final static int flowWindow = 100 * 1024 * 1024;
 }

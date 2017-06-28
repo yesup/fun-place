@@ -9,6 +9,8 @@ import io.netty.channel.epoll.EpollServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+
 /**
  * Created by jeffye on 27/06/17.
  */
@@ -19,11 +21,15 @@ public class DummyServer {
     EventLoopGroup bossGroup;
     EventLoopGroup workGroup;
     Server impl;
-    ProcessQueue handler;
+
+    ArrayList<ProcessQueue> handlers = new ArrayList<>();
 
     public void start() throws Exception {
-        handler = new ProcessQueue();
-        handler.start();
+        for(int i=0; i<Constants.QUEUE_HANDLER_NUM; i++) {
+            ProcessQueue handler = new ProcessQueue();
+            handler.start();
+            handlers.add(handler);
+        }
 
         bossGroup = new EpollEventLoopGroup(1);
         workGroup = new EpollEventLoopGroup(16);
@@ -34,6 +40,7 @@ public class DummyServer {
                 .bossEventLoopGroup(bossGroup)
                 .workerEventLoopGroup(workGroup)
                 .channelType(EpollServerSocketChannel.class)
+                .flowControlWindow(Constants.flowWindow)
                 .addService(new DummyServerImpl())
                 .build();
 
@@ -53,7 +60,9 @@ public class DummyServer {
         impl.shutdownNow();
         workGroup.shutdownGracefully().awaitUninterruptibly(2000);
         bossGroup.shutdownGracefully().awaitUninterruptibly(2000);
-        handler.interrupt();
+        for(ProcessQueue handler: handlers) {
+            handler.interrupt();
+        }
     }
 
     public void blockUntilShutdown() throws InterruptedException {

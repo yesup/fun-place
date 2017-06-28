@@ -12,12 +12,6 @@ public class DummyServerImpl extends DummyServerGrpc.DummyServerImplBase {
 
     @Override
     public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
-        String name = req.getName();
-
-        HelloReply.Builder builder = HelloReply.newBuilder();
-        builder.setName(name);
-
-        responseObserver.onNext(builder.build());
-        responseObserver.onCompleted();
+        ProcessQueue.forDelay(req, responseObserver);
     }
 }

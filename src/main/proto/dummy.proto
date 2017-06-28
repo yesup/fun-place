@@ -18,5 +18,6 @@ message HelloRequest {
 message HelloReply {
     string reqId = 1;
     string name = 2;
-    string json = 3;
+    int64 delay = 3;
+    string json = 4;
 }

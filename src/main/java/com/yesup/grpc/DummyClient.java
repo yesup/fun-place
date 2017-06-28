@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by jeffye on 27/06/17.
@@ -31,25 +32,39 @@ public class DummyClient implements Closeable {
     final int total;
     final int qps;
 
-    final EventLoopGroup workerGroup = new EpollEventLoopGroup(16);
+    long startTs = System.currentTimeMillis();
+
+    final EventLoopGroup workerGroup = new EpollEventLoopGroup();
+
+    final AtomicLong totalTime = new AtomicLong(0);
+    final AtomicLong totalServerDelay = new AtomicLong(0);
+    final AtomicLong slowest = new AtomicLong(0);
 
     final AtomicInteger doneCounter = new AtomicInteger(0);
     final AtomicInteger errorCounter = new AtomicInteger(0);
 
+    ManagedChannel ch = null;
+    DummyServerGrpc.DummyServerStub stub;
+
     public DummyClient(int total, int qps) {
         this.total = total;
         this.qps = qps;
-    }
 
-    public void sendAndWaitComplete() throws Exception {
-        ManagedChannel ch = NettyChannelBuilder
+        ch = NettyChannelBuilder
                 .forAddress("127.0.0.1", Constants.PORT)
                 .eventLoopGroup(workerGroup)
                 .channelType(EpollSocketChannel.class)
                 .usePlaintext(true)
+                // .flowControlWindow(Constants.flowWindow)
                 .build();
 
-        DummyServerGrpc.DummyServerStub stub = DummyServerGrpc.newStub(ch);
+        stub = DummyServerGrpc.newStub(ch);
+    }
+
+    public void sendAndWaitComplete() throws Exception {
+        LOG.info("start testing now");
+
+        startTs = System.currentTimeMillis();
 
         RateLimiter limiter = RateLimiter.create(qps);
 
@@ -65,9 +80,15 @@ public class DummyClient implements Closeable {
 
         for(int i=0; i<total; i++) {
             limiter.acquire();
+
+
             stub.hello(req, new StreamObserver<HelloReply>() {
+
+                final long req_start = System.currentTimeMillis();
+
                 @Override
                 public void onNext(HelloReply helloReply) {
+                    totalServerDelay.addAndGet(helloReply.getDelay());
                     queue.offer(helloReply.getName());
                     doneCounter.incrementAndGet();
                     progressDisplay();
@@ -86,12 +107,16 @@ public class DummyClient implements Closeable {
                 }
 
                 void progressDisplay() {
+                    long delay = System.currentTimeMillis() - req_start;
+                    slowest.updateAndGet((prev)-> delay > prev ? delay : prev);
+                    totalTime.addAndGet(delay);
                     int replied = totalCounter.incrementAndGet();
                     if ( replied % 1000 == 0 ) {
                         LOG.info("{} replied", replied);
                     }
                 }
             });
+
             if ( i % 1000 == 0 ) {
                 LOG.info("{} req sent", i);
             }
@@ -103,7 +128,7 @@ public class DummyClient implements Closeable {
             finished++;
         }
 
-        ch.shutdownNow().awaitTermination(2, TimeUnit.SECONDS);
+
     }
 
     OpenRtb.BidRequest createBidRequest () {
@@ -156,11 +181,27 @@ public class DummyClient implements Closeable {
     }
 
     public void report() {
-        LOG.info("Done {}, error {}", doneCounter.get(), errorCounter.get());
+        long elapse = System.currentTimeMillis() - startTs;
+        long throughput = total * 1000 / elapse;
+        long speed = totalTime.get() / total;
+        long serverDelay = totalServerDelay.get() / total;
+
+        LOG.info("Done {}, error {}, through put {} QPS, speed {}ms, server delay {}ms, slowest {}", new Object[] {
+                doneCounter.get(),
+                errorCounter.get(),
+                throughput,
+                speed,
+                serverDelay,
+                slowest.get()
+        } );
     }
 
     @Override
     public void close() throws IOException {
+        try {
+            ch.shutdownNow().awaitTermination(2, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+        }
         workerGroup.shutdownGracefully().awaitUninterruptibly(2000);
     }
 }
