@@ -12,8 +12,11 @@ service DummyServer {
 
 message HelloRequest {
     string name = 1;
+    bytes payload = 2;
 }
 
 message HelloReply {
-    string name = 1;
+    string reqId = 1;
+    string name = 2;
+    string json = 3;
 }

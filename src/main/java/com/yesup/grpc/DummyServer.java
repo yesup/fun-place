@@ -19,10 +19,15 @@ public class DummyServer {
     EventLoopGroup bossGroup;
     EventLoopGroup workGroup;
     Server impl;
+    ProcessQueue handler;
 
     public void start() throws Exception {
+        handler = new ProcessQueue();
+        handler.start();
+
         bossGroup = new EpollEventLoopGroup(1);
         workGroup = new EpollEventLoopGroup(16);
+
 
         impl = NettyServerBuilder
                 .forPort(Constants.PORT)
@@ -48,6 +53,7 @@ public class DummyServer {
         impl.shutdownNow();
         workGroup.shutdownGracefully().awaitUninterruptibly(2000);
         bossGroup.shutdownGracefully().awaitUninterruptibly(2000);
+        handler.interrupt();
     }
 
     public void blockUntilShutdown() throws InterruptedException {

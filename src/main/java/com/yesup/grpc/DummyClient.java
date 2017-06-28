@@ -1,6 +1,7 @@
 package com.yesup.grpc;
 
 import com.google.common.util.concurrent.RateLimiter;
+import com.google.openrtb.OpenRtb;
 import com.yesup.fun.Constants;
 import com.yesup.grpc_dummy.DummyServerGrpc;
 import com.yesup.grpc_dummy.HelloReply;
@@ -54,6 +55,7 @@ public class DummyClient implements Closeable {
 
         HelloRequest.Builder builder = HelloRequest.newBuilder();
         builder.setName("Jeff");
+        builder.setPayload(createBidRequest().toByteString());
         HelloRequest req = builder.build();
 
         AtomicInteger totalCounter = new AtomicInteger(0);
@@ -102,6 +104,55 @@ public class DummyClient implements Closeable {
         }
 
         ch.shutdownNow().awaitTermination(2, TimeUnit.SECONDS);
+    }
+
+    OpenRtb.BidRequest createBidRequest () {
+        OpenRtb.BidRequest.Builder bidBuilder = OpenRtb.BidRequest.newBuilder();
+
+        bidBuilder.setId("test-1111111");
+
+        OpenRtb.BidRequest.Imp.Banner.Builder bannerBuilder = OpenRtb.BidRequest.Imp.Banner.newBuilder();
+        bannerBuilder.setId("1");
+        bannerBuilder.setW(300);
+        bannerBuilder.setH(250);
+
+        bidBuilder.addImp(OpenRtb.BidRequest.Imp.newBuilder().setId("1").setBanner(
+                bannerBuilder
+        ).setTagid("test-rtb-req"));
+
+        bidBuilder.setSite(
+                OpenRtb.BidRequest.Site.newBuilder()
+                        .setId("test")
+                        .setName("jsmtv.com")
+                        .setDomain("jsmtv.com")
+                        .setPage("http://www.jsmtv.com")
+                        .setPublisher(
+                                OpenRtb.BidRequest.Publisher.newBuilder()
+                                        .setId("test").setName("Jsmtv")
+                        ));
+        bidBuilder.setDevice(
+                OpenRtb.BidRequest.Device.newBuilder()
+                        .setUa("Mozilla/5.0 (Linux; Android 7.0;SAMSUNG SM-G955F Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/5.2 Chrome/51.0.2704.106 Mobile Safari/537.36")
+                        .setGeo(OpenRtb.BidRequest.Geo.newBuilder()
+                                .setType(OpenRtb.LocationType.IP)
+                                .setCountry("USA")
+                                .setZip("49221")
+                        )
+                        .setIp("73.191.234.159")
+                        .setDevicetype(OpenRtb.DeviceType.HIGHEND_PHONE)
+                        .setOs("Android")
+                        .setJs(true)
+                        .setConnectiontype(OpenRtb.ConnectionType.WIFI)
+        );
+        bidBuilder.setUser(
+                OpenRtb.BidRequest.User.newBuilder()
+                        .setId("testuser")
+        );
+        bidBuilder.setAt(OpenRtb.AuctionType.SECOND_PRICE);
+        bidBuilder.setTmax(125);
+        bidBuilder.addCur("USD");
+
+        return bidBuilder.build();
     }
 
     public void report() {

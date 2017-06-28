@@ -12,4 +12,6 @@ public final class Constants {
     public final static int REQ_TOTAL = 1000000;
 
     public final static int REQ_QPS = 10000;
+
+    public final static long REPLY_DEPLAY = 100;
 }
