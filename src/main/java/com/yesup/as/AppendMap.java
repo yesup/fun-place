@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -15,7 +16,7 @@ import java.util.logging.LogManager;
 /**
  * Created by jeffye on 30/06/17.
  */
-public class AppendRecord {
+public class AppendMap {
 
     private final static Logger LOG;
 
@@ -28,7 +29,7 @@ public class AppendRecord {
             h.setLevel(Level.SEVERE);
         }
 
-        LOG = LoggerFactory.getLogger(AppendRecord.class);
+        LOG = LoggerFactory.getLogger(AppendMap.class);
     }
 
     public static void main(String[] args) throws Exception {
@@ -40,12 +41,14 @@ public class AppendRecord {
         AerospikeClient client = new AerospikeClient(policy, hosts);
 
         try {
-            Key key = new Key("bar", "log", "append_key");
+            Key key = new Key("bar", "log", "append_map_key");
 
             ArrayList<Value> data = new ArrayList<>();
-            data.add(Value.get((int)(Math.random() * 10000)));
+            HashMap<String, Integer> map = new HashMap<>();
+            map.put("score2",(int)(Math.random() * 10000));
+            data.add(Value.get(map));
 
-            client.operate(null, key, ListOperation.appendItems("list", data));
+            client.operate(null, key, ListOperation.appendItems("maplist", data));
         } finally {
             client.close();
         }

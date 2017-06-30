@@ -14,7 +14,7 @@
 			<lineEnding>unix</lineEnding>
 			<outputDirectory>config</outputDirectory>
 			<includes>
-				<include>*.properties</include>
+				<include>*</include>
 			</includes>
 		</fileSet>
 		<fileSet>
