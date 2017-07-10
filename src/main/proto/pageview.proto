@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.yesup.pubsub";
+option java_outer_classname = "Event";
+
+package pubsub;
+
+message TrafficSource {
+    string source = 1;
+    string medium = 2;
+    string campaign = 3;
+    string content = 4;
+};
+
+message Audience {
+    string ip = 1;
+    string truid = 2;
+}
+
+message Dimension {
+    int32 w = 1;
+    int32 h = 2;
+}
+
+message Browser {
+    string page = 1;
+    string referrer = 2;
+    string userAgent = 3;
+    Dimension dim = 4;
+}
+
+message PageView {
+    int64 timestamp = 1;
+    string property = 2;
+    string session = 3;
+    Audience audience = 4;
+    TrafficSource trafficSource = 5;
+    Browser browser = 6;
+}
