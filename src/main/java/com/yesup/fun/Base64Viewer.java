@@ -48,6 +48,11 @@ public class Base64Viewer {
                     str = str + ".";
                 }
             }
+            if ( bytes.length < i + 8 ) {
+                for (int j=0; j < i+8-bytes.length; j++) {
+                    System.out.print("   ");
+                }
+            }
             System.out.println(str);
         }
     }
