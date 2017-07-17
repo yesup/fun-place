@@ -82,7 +82,7 @@ public class DummyClient implements Closeable {
 
         startTs = System.currentTimeMillis();
 
-        RateLimiter limiter = RateLimiter.create(qps);
+        RateLimiter limiter = RateLimiter.create(qps, 1, TimeUnit.MINUTES);
 
         AtomicInteger totalCounter = new AtomicInteger(0);
 
