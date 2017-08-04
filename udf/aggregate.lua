@@ -7,3 +7,8 @@ function count(s)
     end
     return s : map(mapper) : reduce(reducer)
 end
+
+function updateRecord(r, binName, newValue)
+    r[binName] = newValue
+    aerospike:update(r)
+end

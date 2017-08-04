@@ -60,12 +60,13 @@ public class ReadCutoff {
                     Record record = rs.getRecord();
                     String id = record.getString("id");
                     LOG.info("Got {}", id);
-                    client.put(null, key, new Bin("cutoff", 0));
                 }
 
             } finally {
                 rs.close();
             }
+
+            client.execute(null, stmt, "aggregate", "updateRecord", Value.get("cutoff"), Value.get(0));
         } finally {
             client.close();
         }
