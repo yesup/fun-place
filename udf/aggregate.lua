@@ -9,6 +9,7 @@ function count(s)
 end
 
 function updateRecord(r, binName, newValue)
+    record.set_ttl(r, 600)
     r[binName] = newValue
     aerospike:update(r)
 end
