@@ -2,6 +2,9 @@ package com.yesup.netty;
 
 import com.yesup.fun.Constants;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -15,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class Client {
 
@@ -65,10 +70,25 @@ public class Client {
         headers.set(HttpHeaderNames.HOST, "127.0.0.1");
         headers.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
 
-        byte[] bytes = "hello server".getBytes("UTF-8");
+        headers.set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
-        headers.set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
-        req.content().clear().writeBytes(bytes);
+        String payload = "hello server";
+
+        ByteBuf zipped = Unpooled.buffer(payload.length());
+
+        try (GZIPOutputStream gos = new GZIPOutputStream(new ByteBufOutputStream(zipped));) {
+            byte[] bytes = "hello server".getBytes("UTF-8");
+
+            gos.write(bytes, 0, bytes.length);
+
+            gos.finish();
+        }
+
+        zipped.resetReaderIndex();
+        headers.set(HttpHeaderNames.CONTENT_LENGTH,  zipped.readableBytes());
+        req.content().clear().writeBytes(zipped.array());
+
+        zipped.release();
 
         ch.writeAndFlush(req);
         ch.closeFuture().syncUninterruptibly();
