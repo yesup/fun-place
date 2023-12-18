@@ -187,7 +187,7 @@
         <repository>
             <id>central</id>
             <name>Central maven repository</name>
-            <url>http://central.maven.org/maven2/</url>
+            <url>https://central.maven.org/maven2/</url>
         </repository>
         <repository>
             <id>sonatype-release</id>
